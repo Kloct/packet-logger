@@ -1,0 +1,6 @@
+{
+    "name": "proxy-packet-logger",
+    "author": "Kloct",
+    "description": "A GUI packet logger with proxy integration",
+    "reloadable": "true"
+  }

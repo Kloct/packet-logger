@@ -1,0 +1,18 @@
+.packetList {
+    width: 25%;
+    height: 100%;
+    float: left;
+    background-color: aqua;
+}
+
+.packetInfo {
+    width: 50%;
+    height: 100%;
+    float: left;
+}
+.packetFilters {
+    width: 24%;
+    height: 100%;
+    float: left;
+    background-color: brown;
+}

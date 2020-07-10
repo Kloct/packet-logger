@@ -1,0 +1,31 @@
+<html>
+    <head>
+        <script>
+            window.addEventListener('error', function(e) {
+                _tera_client_proxy_.alert('Error: ' + e.message)
+            })
+            
+            window.onload = function() {
+                _tera_client_proxy_.resize_to(1200, 700)
+                _tera_client_proxy_.set_title('Packet Logger')
+            }
+        </script>
+        <link rel="stylesheet" href="main.css">
+    </head>
+    <body>
+        <div id="testcomponent"></div>
+        <!--
+        <script src="https://unpkg.com/babel-standalone@6/babel.min.js" crossorigin></script>
+        <script src="https://unpkg.com/react@16/umd/react.production.min.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js" crossorigin></script>
+        -->
+        <!--Local Sources-->
+
+        <script src="/lib/babel.min.js"></script>
+        <script type="text/babel" src="/lib/react.production.min.js"></script>
+        <script type="text/babel" src="/lib/react-dom.production.min.js"></script>
+
+        <!--React Component-->
+        <script type="text/babel" src="app.js"></script>
+    </body>
+</html>
