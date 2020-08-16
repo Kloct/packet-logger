@@ -129,7 +129,6 @@ module.exports = function packetLogger(mod) {
         res.json(Object.keys(savedData.savedFilters))
     })
     ui.post('/loadFilters', (req, res)=>{ //get load filter
-        console.log(savedData.savedFilters)
         filters = { //what a mutable nightmare
             allowlist: [...savedData.savedFilters[req.body.selectedTemplate].allowlist],
             blocklist: [...savedData.savedFilters[req.body.selectedTemplate].blocklist]
