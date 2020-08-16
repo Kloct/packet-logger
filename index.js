@@ -122,7 +122,7 @@ module.exports = function packetLogger(mod) {
                 blocklist: [...filters.blocklist]
             }
         })
-        fs.writeFileSync(savedDataFile, JSON.stringify(savedData, null, '\t'))
+        fs.writeFileSync(savedDataFile, JSON.stringify(savedData, (key, value) => typeof value === 'bigint' ? value.toString() + 'n' : value, '\t'))
         res.json({})
     })
     ui.get('/savedFilters', (req, res)=>{ //get saved filters list
