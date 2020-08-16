@@ -1,73 +1,76 @@
-const express = require('express');
 const UI = require('../ui')
-const bodyParser = require('body-parser');
+const bodyParser = require('../ui/node_modules/body-parser');
 const fs = require('fs');
 const path = require('path');
-const app = express();
 const ws = require('ws');
 const defParse = require('./defParser')
-let port = 3001
-
-let savedData = require('./savedData.json'),
-        packetCache = [],
-        filters = {
-            allowlist: [],
-            blocklist: []
-        },
-        paused = false,
-        logGroup = {
-            logServer: true,
-            logClient: true
-        }
-
-const wsServer = new ws.Server({ noServer: true })
-// Websocket keep alive
-function heartbeat(){
-    this.isAlive = true;
-}
-wsServer.on('connection', socket => {
-    socket.isAlive = true;
-    socket.on('pong', heartbeat)
-    socket.send(JSON.stringify({
-        syncState: {
-            packets: packetCache.map((packet)=>packet.string),
-            filters,
-            paused,
-            logServer: logGroup.logServer,
-            logClient: logGroup.logClient
-        }
-    }))
-})
-const wsPing = setInterval(()=>{ //keepalive ping interval
-    wsServer.clients.forEach((client)=>{
-        if(!client.isAlive) return client.terminate();
-        client.isAlive = false;
-        client.ping(()=>{})
-    });
-}, 30000)
-wsServer.on('close', ()=>{
-    clearInterval(wsPing)
-})
-const server = app.listen(port, () => console.log(`Express listening on port ${port}`));
-
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    next();
-});
-app.use(bodyParser.json({limit: '50mb'}));
-
-server.on('upgrade', (request, socket, head) => {
-    wsServer.handleUpgrade(request, socket, head, socket => {
-        wsServer.emit('connection', socket, request);
-    });
-});
-
-let savedDataFile = path.join(__dirname, 'savedData.json')
+const http = require('http')
 
 module.exports = function packetLogger(mod) {
-    const ui = UI(mod)
+    //For standalone env install express and replace these vars
+    //const UI = require('express')
+    //const ui = UI()
+    //ui.listen(port, () => console.log(`Express listening on port ${port}`));
+    const ui = new UI(mod),
+        { command } = mod.require
     let packetBatchCache = []
+
+
+    /*Setup WS and api server*/
+    let savedData = require('./savedData.json'),
+            packetCache = [],
+            filters = {
+                allowlist: [],
+                blocklist: []
+            },
+            paused = false,
+            logGroup = {
+                logServer: true,
+                logClient: true
+            }
+    const server = http.createServer().listen(0)
+    const wsServer = new ws.Server({ server: server })
+    // Websocket keep alive
+    function heartbeat(){
+        this.isAlive = true;
+    }
+    wsServer.on('connection', socket => {
+        socket.isAlive = true;
+        socket.on('pong', heartbeat)
+        socket.send(JSON.stringify({
+            syncState: {
+                packets: packetCache.map((packet)=>packet.string),
+                filters,
+                paused,
+                logServer: logGroup.logServer,
+                logClient: logGroup.logClient
+            }
+        }))
+    })
+    const wsPing = setInterval(()=>{ //keepalive ping interval
+        wsServer.clients.forEach((client)=>{
+            if(!client.isAlive) return client.terminate();
+            client.isAlive = false;
+            client.ping(()=>{})
+        });
+    }, 30000)
+    wsServer.on('close', ()=>{
+        clearInterval(wsPing)
+    })
+    
+    ui.use((req, res, next) => {
+        res.header("Access-Control-Allow-Origin", "*");
+        res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+        next();
+    });
+    ui.use(bodyParser.json({limit: '50mb'}));
+    
+    let savedDataFile = path.join(__dirname, 'savedData.json')
+
+    ui.use(UI.static(path.join(__dirname, 'build')))
+    
+
+
 
     const batchPacketUpdates = setInterval(()=>{ //sending packets in batches as to not flood the UI's listener
         if(packetBatchCache.length>0){
@@ -93,7 +96,7 @@ module.exports = function packetLogger(mod) {
             }))
         })
     }
-    app.post('/changeFilters', (req, res) => { //post add/remove filter | TODO: hook up to filter packets
+    ui.post('/changeFilters', (req, res) => { //post add/remove filter | TODO: hook up to filter packets
         if (req.body.entry){ //add filter
             filters[req.body.type].push(req.body.entry)
         } else { //remove filter
@@ -102,17 +105,17 @@ module.exports = function packetLogger(mod) {
         res.json({})
         syncState();
     })
-    app.post('/clearFilters', (req, res)=>{
+    ui.post('/clearFilters', (req, res)=>{
         filters[req.body.type]=[]
         res.json({})
         syncState();
     })
-    app.get('/pause', (req, res) => { //pause packet cap
+    ui.get('/pause', (req, res) => { //pause packet cap
         paused = !paused
         res.json({})
         syncState();
     })
-    app.post('/saveFilters', (req, res)=>{ //post save filters
+    ui.post('/saveFilters', (req, res)=>{ //post save filters
         Object.assign(savedData.savedFilters, {
             [req.body.name]:{
                 allowlist: [...filters.allowlist],
@@ -122,10 +125,10 @@ module.exports = function packetLogger(mod) {
         fs.writeFileSync(savedDataFile, JSON.stringify(savedData, null, '\t'))
         res.json({})
     })
-    app.get('/savedFilters', (req, res)=>{ //get saved filters list
+    ui.get('/savedFilters', (req, res)=>{ //get saved filters list
         res.json(Object.keys(savedData.savedFilters))
     })
-    app.post('/loadFilters', (req, res)=>{ //get load filter
+    ui.post('/loadFilters', (req, res)=>{ //get load filter
         console.log(savedData.savedFilters)
         filters = { //what a mutable nightmare
             allowlist: [...savedData.savedFilters[req.body.selectedTemplate].allowlist],
@@ -134,33 +137,33 @@ module.exports = function packetLogger(mod) {
         res.json({});
         syncState();
     })
-    app.post('/saveLogs', (req, res)=>{ //post save logs
+    ui.post('/saveLogs', (req, res)=>{ //post save logs
         Object.assign(savedData.savedLogs, {[req.body.name]: packetCache})
         fs.writeFileSync(savedDataFile, JSON.stringify(savedData, (key, value) => typeof value === 'bigint' ? value.toString() + 'n' : value, '\t'))
         res.json({});
     })
-    app.get('/savedLogs', (req, res)=>{ //get saved logs list
+    ui.get('/savedLogs', (req, res)=>{ //get saved logs list
         res.json(Object.keys(savedData.savedLogs))
     })
-    app.post('/loadLogs', (req, res)=>{ //get load log
+    ui.post('/loadLogs', (req, res)=>{ //get load log
         packetCache = [...savedData.savedLogs[req.body.logname]]
         res.json({});
         syncState();
     })
-    app.post('/deleteFromSaved', (req, res)=>{ //post delete from saved data
+    ui.post('/deleteFromSaved', (req, res)=>{ //post delete from saved data
         delete savedData[req.body.type][req.body.name]
         fs.writeFileSync(savedDataFile, JSON.stringify(savedData, (key, value) => typeof value === 'bigint' ? value.toString() + 'n' : value, '\t'))
         res.json(Object.keys(savedData[req.body.type]))
     })
-    app.post('/getHex', (req, res)=>{ //Hex Tool Call
+    ui.post('/getHex', (req, res)=>{ //Hex Tool Call
         res.json(readHex(req.body.hexx.split(/\s|\n/g).join("")))
     })
-    app.post('/filterGroup', (req, res)=>{
+    ui.post('/filterGroup', (req, res)=>{
         logGroup = Object.assign(logGroup, req.body)
         res.json({})
         syncState();
     })
-    app.post('/getDef', (req, res)=>{
+    ui.post('/getDef', (req, res)=>{
         const name = req.body.name,
             defs = name && mod.dispatch.protocol.constructor.defs.get(name),
             defVersion = defs && Math.max(...defs.keys()),
@@ -173,27 +176,32 @@ module.exports = function packetLogger(mod) {
         }
         
     })
-    app.post('/getPacketData', (req, res)=>{
+    ui.post('/getPacketData', (req, res)=>{
         let packetData = JSON.stringify(packetCache[req.body.index], (key, value) =>
             typeof value === 'bigint' ? value.toString() + 'n' : value // serialize bigint as string
         )
         res.json(packetData)
     })
-    app.get('/clearLog', (req, res)=>{
+    ui.get('/clearLog', (req, res)=>{
         packetCache = []
         syncState();
-        //console.log(server)
-        //console.log(ui.listen(5002, ()=>{console.log("another server pls")}))
     })
-    //Dw bout this
+    ui.get('/wsPort', (req, res)=>{
+        res.json({port: server.address().port})
+    })
     //https://github.com/tera-mods/debug credit to Pinkie for original hook implementation
-    //const cache = []
+    const cache = []
     //hook original packets
-    /*mod.hook('*', 'raw', { order: -Infinity }, (code, data) => {
+    mod.hook('*', 'raw', { order: -Infinity }, (code, data) => {
         cache.push({ code, data: Buffer.from(data) })
     })
     //hook all packets after mods
-    mod.hook('*', 'raw', { order: Infinity }, (code, data) => {
+    mod.hook('*', 'raw', { order: Infinity, filter: {
+        // These need to go through so we can clean up from our previous hook, even if we're not logging them
+        fake: null,
+        modified: null,
+        silenced: null
+    } }, (code, data) => {
         if (data.$fake) {
             if (!data.$silenced) //don't need to log silenced packets
                 writePacket({ code, data }, {
@@ -216,13 +224,6 @@ module.exports = function packetLogger(mod) {
                 fake: true,
                 silenced: false
             })
-    })*/
-    mod.hook('*', 'raw', { order: Infinity }, (code, data) => {
-        if(data.$silenced)return
-        else
-            writePacket({code, data}, {
-                incoming: data.$incoming
-            })
     })
     //apply filters write packet
     function writePacket(pkt, flags) {
@@ -230,7 +231,7 @@ module.exports = function packetLogger(mod) {
         const name = mod.dispatch.protocol.packetEnum.code.get(pkt.code),
             defs = name && mod.dispatch.protocol.constructor.defs.get(name),
             defVersion = defs && Math.max(...defs.keys())
-        //apply filters
+        //uily filters
         if(filters.allowlist.length>0&&!filters.allowlist.includes(name)) return;
         if(filters.blocklist.includes(name)) return;
         if(!logGroup.logServer&&flags.incoming) return;
@@ -277,4 +278,7 @@ module.exports = function packetLogger(mod) {
             string: buf.toString('ucs2', 0, len)
         }
     }
+    command.add('logger', ()=>{
+        ui.open()
+    })
 }

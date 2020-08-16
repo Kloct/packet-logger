@@ -1,0 +1,235 @@
+html {
+  --scrollbarBG: #424242ff;
+  --thumbBG: #252526ff;
+  --background: #1e1e1eff;
+  --panes: #252526ff;
+  --nthRow: #2a2d2eff;
+  --tableHover: #37373dff;
+  --tableSelected: rgb(78, 78, 85);
+  --button: #0e639cff;
+  --buttonHover: rgb(22, 122, 189);
+  --buttonDisabled: #4e575cff;
+  --textDisabled: #7a7a7aff;
+  --text: white;
+}
+body {
+  background-color: rgb(80, 80, 80);
+  font-family: Consolas;
+  scrollbar-color: var(--scrollbarBG) var(--thumbBG);
+  scrollbar-width: thin;
+}
+h1 {
+  color: var(--text);
+  font-size: 12pt;
+  font-family: Consolas;
+  font-weight: normal;
+}
+::-webkit-scrollbar {
+  width: 15px !important;
+}
+::-webkit-scrollbar-track {
+  background: var(--thumbBG);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbarBG);
+}
+.main {
+  background-color: var(--background);
+  width: 1280px;
+  height: 720px;
+}
+button {
+  background-color: var(--button);
+  font-size: 12pt;
+  color: var(--text);
+  font-family: Consolas;
+  border: none;
+  height: 30px
+}
+button:hover {
+  background-color: var(--buttonHover);
+  cursor: pointer;
+}
+button:disabled {
+  color: var(--textDisabled);
+  background-color: var(--buttonDisabled);
+  cursor: unset;
+}
+pre {
+  color: var(--text);
+}
+textarea, input {
+  font-size: 12pt;
+  background-color: var(--background);
+  border: none;
+  color: var(--text);
+}
+
+/*log Pane*/
+.logpane {
+  float: left;
+  background-color: var(--panes);
+  width: 280px;
+  height: 720px;
+}
+.logpanecontent {
+  height:690px;
+  overflow: scroll;
+  overflow-x: hidden;
+}
+.logpanebuttons {
+  margin-top: 5px;
+  height: 25px;
+  background-color: var(--panes);
+}
+.logpaneimgcontainer{
+  float: left;
+  margin-left:10px;
+}
+.logpaneimgcontainer :hover {
+  opacity: 0.5;
+}
+.logtable {
+  color: var(--text);
+  width: 280px;
+}
+.logtable tr:nth-child(odd) {
+  background-color: var(--nthRow);
+}
+.logtable tr:hover {
+  background-color: var(--tableHover);
+  cursor: pointer;
+}
+.logpaneselected {
+  background-color: var(--tableSelected);
+}
+
+/*Filter Pane*/
+.filterpane {
+  background-color: var(--panes);
+  width: 280px;
+  height: 720px;
+  float: right;
+}
+.filtertitle {
+  padding-left: 20px;
+  padding-right: 20px;
+  font-size: 12pt;
+  color: var(--text);
+  font-weight: normal;
+}
+.filtertitle button{
+  float: right;
+}
+.filtertablediv{
+  width: 240px;
+  height: 210px;
+  background-color: var(--background);
+  overflow: scroll;
+  overflow-x: hidden
+}
+.filtertable{
+  font-size: 12pt;
+  color: var(--text);
+  width: 220px;
+  border-collapse: collapse !important;
+}
+.filtertable tr:nth-child(odd) {
+  background-color: var(--nthRow);
+}
+.filtertable tr:hover {
+  background-color: var(--tableHover);
+}
+
+/*Def View*/
+.centerpanel{
+  float: left;
+  width: 720;
+  height: 720;
+  color: var(--text);
+}
+.centerpaneltitle{
+  background-color: var(--panes);
+  padding: 5px 5px;
+  width: 100%
+}
+.contentpanelbutton {
+  margin-right: 10px;
+}
+.centerpanel p,pre{
+  margin: 10px 15px;
+}
+.centerpanelsection{
+  width: 720px;
+  height: 360px;
+}
+
+/*Pop Out*/
+.popout {
+  position: absolute;
+  color: white;
+  background-color: var(--panes);
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--textDisabled);
+}
+.popoutresizeable {
+  position: absolute;
+  color: white;
+  background-color: var(--panes);
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--textDisabled);
+  resize: both;
+  height: 250px;
+  width: 350px;
+  overflow: hidden;
+  padding-bottom: 30px;
+}
+.popouttitle {
+  padding: 5px;
+  padding-left: 20px;
+  cursor: move;
+}
+.popoutX{
+  float: right;
+  cursor: pointer;
+  padding-right: 10px;
+  padding-top: 5px;
+}
+.popoutcontent {
+  height: 100%;
+  margin-left: 10px;
+  margin-right: 10px;
+  background-color: var(--background);
+  overflow: scroll;
+  white-space: pre;
+}
+
+/*hextool*/
+.hextool textarea {
+  margin-left: 15px;
+  height: 165px;
+  width: 120px;
+  resize: none;
+  word-wrap: break-word;
+  overflow: auto;
+}
+.hextool p {
+  padding-bottom: 5px;
+  padding-left: 20px;
+}
+.hextoolresults {
+  font-size: 12pt;
+  width: 220px;
+  height: 30px;
+  background-color: var(--background);
+  vertical-align: center;
+}
+.hextoolresultstring {
+  font-size: 12pt;
+  width: 430px;
+  height: 80px;
+  background-color: var(--background);
+  margin-bottom: 15px;
+}

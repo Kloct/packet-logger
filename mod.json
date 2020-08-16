@@ -2,5 +2,6 @@
     "name": "packet-logger",
     "author": "Kloct",
     "description": "A GUI packet logger with proxy integration",
-    "reloadable": "true"
+    "update": "github:kloct/packete-logger",
+    "disableAutoUpdate": false
   }
