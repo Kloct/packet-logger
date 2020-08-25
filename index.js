@@ -3,8 +3,9 @@ const bodyParser = require('../ui/node_modules/body-parser');
 const fs = require('fs');
 const path = require('path');
 const ws = require('ws');
-const defParse = require('./defParser')
+const defParse = require('./lib/defParser')
 const http = require('http')
+const LogSave = require('./lib/logSave').LogSave;
 
 module.exports = function packetLogger(mod) {
     //For standalone env install express and replace these vars
@@ -18,16 +19,17 @@ module.exports = function packetLogger(mod) {
 
     /*Setup WS and api server*/
     let savedData = require('./savedData.json'),
-            packetCache = [],
-            filters = {
-                allowlist: [],
-                blocklist: []
-            },
-            paused = false,
-            logGroup = {
-                logServer: true,
-                logClient: true
-            }
+        packetCache = [],
+        filters = {
+            allowlist: [],
+            blocklist: []
+        },
+        paused = false,
+        logGroup = {
+            logServer: true,
+            logClient: true
+        },
+        maxLogSize = 200 //default size of 200 TODO: add static to settings object later
     const server = http.createServer().listen(0)
     const wsServer = new ws.Server({ server: server })
     // Websocket keep alive
@@ -39,11 +41,12 @@ module.exports = function packetLogger(mod) {
         socket.on('pong', heartbeat)
         socket.send(JSON.stringify({
             syncState: {
-                packets: packetCache.map((packet)=>packet.string),
+                packets: packetCache.map((packet)=>packet.name),
                 filters,
                 paused,
                 logServer: logGroup.logServer,
-                logClient: logGroup.logClient
+                logClient: logGroup.logClient,
+                maxLogSize
             }
         }))
     })
@@ -69,14 +72,11 @@ module.exports = function packetLogger(mod) {
 
     ui.use(UI.static(path.join(__dirname, 'build')))
     
-
-
-
     const batchPacketUpdates = setInterval(()=>{ //sending packets in batches as to not flood the UI's listener
         if(packetBatchCache.length>0){
-            if(packetCache.length+packetBatchCache.length>200) packetCache.splice(0, packetCache.length+packetBatchCache.length-200) // max size 200
+            if(packetCache.length+packetBatchCache.length>maxLogSize) packetCache.splice(0, packetCache.length+packetBatchCache.length-maxLogSize) // max size 200
             wsServer.clients.forEach((client)=>{
-                client.send(JSON.stringify({packets: packetBatchCache.map((packet)=>packet.string)}))
+                client.send(JSON.stringify({packets: packetBatchCache.map((packet)=>packet.name)}))
             })
             packetCache.push(...packetBatchCache)
             packetBatchCache = []
@@ -87,18 +87,20 @@ module.exports = function packetLogger(mod) {
         wsServer.clients.forEach((client)=>{
             client.send(JSON.stringify({
                 syncState: {
-                    packets: packetCache.map((packet)=>packet.string),
+                    packets: packetCache.map((packet)=>packet.name),
                     filters,
                     paused,
                     logServer: logGroup.logServer,
-                    logClient: logGroup.logClient
+                    logClient: logGroup.logClient,
+                    maxLogSize
                 }
             }))
         })
     }
-    ui.post('/changeFilters', (req, res) => { //post add/remove filter | TODO: hook up to filter packets
+    ui.post('/changeFilters', (req, res) => { //post add/remove filter
         if (req.body.entry){ //add filter
             filters[req.body.type].push(req.body.entry)
+            filters[req.body.type].sort()
         } else { //remove filter
             filters[req.body.type].splice(req.body.index, 1)
         }
@@ -137,22 +139,30 @@ module.exports = function packetLogger(mod) {
         syncState();
     })
     ui.post('/saveLogs', (req, res)=>{ //post save logs
-        Object.assign(savedData.savedLogs, {[req.body.name]: packetCache})
-        fs.writeFileSync(savedDataFile, JSON.stringify(savedData, (key, value) => typeof value === 'bigint' ? value.toString() + 'n' : value, '\t'))
+        let serializedData = LogSave.serialize(packetCache)
+        fs.writeFileSync(path.join(__dirname,'logs',`${req.body.name}.bin`), serializedData)
         res.json({});
     })
     ui.get('/savedLogs', (req, res)=>{ //get saved logs list
-        res.json(Object.keys(savedData.savedLogs))
+        res.json(getLogs())
     })
     ui.post('/loadLogs', (req, res)=>{ //get load log
-        packetCache = [...savedData.savedLogs[req.body.logname]]
+        paused = true //auto pause log when you load
+        let logRead = new Uint8Array(fs.readFileSync(path.join(__dirname,'logs',`${req.body.logname}`)))
+        packetCache = LogSave.parse(logRead)
         res.json({});
         syncState();
     })
-    ui.post('/deleteFromSaved', (req, res)=>{ //post delete from saved data
-        delete savedData[req.body.type][req.body.name]
-        fs.writeFileSync(savedDataFile, JSON.stringify(savedData, (key, value) => typeof value === 'bigint' ? value.toString() + 'n' : value, '\t'))
-        res.json(Object.keys(savedData[req.body.type]))
+    ui.post('/deleteFromSaved', (req, res)=>{ //post delete from saved data add new delete for bin logs
+        if (req.body.type==="savedLogs"){
+            fs.unlinkSync(path.join(__dirname, 'logs', req.body.name))
+            res.json(getLogs())
+
+        } else if (req.body.type==="savedFilters"){
+            delete savedData.savedFilters[req.body.name]
+            fs.writeFileSync(savedDataFile, JSON.stringify(savedData, (key, value) => typeof value === 'bigint' ? value.toString() + 'n' : value, '\t'))
+            res.json(Object.keys(savedData[req.body.type]))
+        }
     })
     ui.post('/getHex', (req, res)=>{ //Hex Tool Call
         res.json(readHex(req.body.hexx.split(/\s|\n/g).join("")))
@@ -162,24 +172,35 @@ module.exports = function packetLogger(mod) {
         res.json({})
         syncState();
     })
-    ui.post('/getDef', (req, res)=>{
-        const name = req.body.name,
-            defs = name && mod.dispatch.protocol.constructor.defs.get(name),
-            defVersion = defs && Math.max(...defs.keys()),
-            protocolPath = path.join(__dirname, '..', '..', 'node_modules', 'tera-data', 'protocol'),
-            defPath = path.join(protocolPath, `${name}.${defVersion}.def`)
-        try{
-            res.json({def: defParse(fs.readFileSync(defPath, 'utf-8'), protocolPath).join('\n')})
-        } catch(e){
-            res.json({def: `No defintion found for packet: ${name}`})
-        }
-        
-    })
     ui.post('/getPacketData', (req, res)=>{
-        let packetData = JSON.stringify(packetCache[req.body.index], (key, value) =>
+        //parse def here
+        const { name, code, version, data} = packetCache[req.body.index]
+        let parsed = null,
+            badDef = false,
+            packetData, def
+            try {
+                parsed = mod.parse(code, version, data)
+                badDef = mod.packetLength(code, version, parsed) !== data.length
+            } catch(e) { badDef = true }
+
+        //get def string
+        const protocolPath = path.join(__dirname, '..', '..', 'node_modules', 'tera-data', 'protocol'),
+            defPath = path.join(protocolPath, `${name}.${version}.def`)
+        try {
+            def = defParse(fs.readFileSync(defPath, 'utf-8'), protocolPath).join('\n')
+        } catch(e){ def = `No defintion found for packet: ${name}` }
+
+        //build and send
+        packetData = {...packetCache[req.body.index], ...{
+            data: parsed?parsed:{Error:`Could not parse ${name}: No definition found.`},
+            hex: data.toString('hex'),
+            def,
+            badDef
+        }}
+        let packetDataString = JSON.stringify(packetData, (key, value) =>
             typeof value === 'bigint' ? value.toString() + 'n' : value // serialize bigint as string
         )
-        res.json(packetData)
+        res.json(packetDataString)
     })
     ui.get('/clearLog', (req, res)=>{
         packetCache = []
@@ -187,6 +208,12 @@ module.exports = function packetLogger(mod) {
     })
     ui.get('/wsPort', (req, res)=>{
         res.json({port: server.address().port})
+    })
+    ui.post('/setMaxLogSize', (req, res)=>{
+        maxLogSize = req.body.size
+        res.json({})
+        syncState();
+
     })
     //https://github.com/tera-mods/debug credit to Pinkie for original hook implementation
     const cache = []
@@ -230,24 +257,18 @@ module.exports = function packetLogger(mod) {
         const name = mod.dispatch.protocol.packetEnum.code.get(pkt.code),
             defs = name && mod.dispatch.protocol.constructor.defs.get(name),
             defVersion = defs && Math.max(...defs.keys())
-        //uily filters
+        //apply filters
         if(filters.allowlist.length>0&&!filters.allowlist.includes(name)) return;
         if(filters.blocklist.includes(name)) return;
         if(!logGroup.logServer&&flags.incoming) return;
         if(!logGroup.logClient&&!flags.incoming) return;
-        let parsed = null,
-            badDef = false
-        if (defs)
-            try {
-                parsed = mod.parse(pkt.code, defVersion, pkt.data)
-                badDef = mod.packetLength(pkt.code, defVersion, parsed) !== pkt.data.length
-            } catch (e) { badDef = true }
         let packet = {
-            string: name,
-            version: defVersion?defVersion:"",
-            badDef: badDef,
-            data: parsed?parsed:{Error:`Could not parse ${name}: No definition found.`},
-            hex: pkt.data.toString('hex')
+            code: pkt.code,
+            name: name?name:`*${flags.incoming?"SU":"CU"}_NEEDS_REMAP_${pkt.code.toString(16).toString().toUpperCase()}`,
+            version: defVersion?defVersion:0,
+            fake: flags.fake,
+            data: pkt.data,
+            timestamp: Math.round(Date.now()/1000)
         }
         if (!paused){
             packetBatchCache.push(packet)
@@ -277,7 +298,17 @@ module.exports = function packetLogger(mod) {
             string: buf.toString('ucs2', 0, len)
         }
     }
-    command.add('logger', ()=>{
-        ui.open()
+    function getLogs(){
+        let logs = fs.readdirSync(path.join(__dirname, 'logs'))
+        logs.splice(logs.indexOf(".gitignore"), 1)
+        return logs
+    }
+
+    command.add('logger', {
+        $default(){
+            ui.open()
+        }
     })
+
+    this.destructor = () => { command.remove(['logger']) }
 }

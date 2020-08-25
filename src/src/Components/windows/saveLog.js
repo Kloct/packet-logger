@@ -24,7 +24,7 @@ export default class SaveFilters extends React.Component {
     return (
       <Draggable
         handle=".popouttitle"
-        defaultPosition={{ x: 500, y: 300 }}
+        defaultPosition={{ x: 0, y: 500 }}
         position={null}
         scale={1}
         onStart={this.handleStart}
@@ -32,10 +32,11 @@ export default class SaveFilters extends React.Component {
         onStop={this.handleStop}>
         <div className="popout">
           <div className="popoutX" onClick={(e) => this.toggleSaveLog(e)}>X</div>
-          <div className="popouttitle">Save Log:</div>
-          <div style={{ padding: "15px" }}>
-            Save As:
-            <input type="text" onChange={(e)=>this.handleChange(e)}></input>
+          <div className="popouttitle">Save Log As:</div>
+          <div style={{ padding:"15px" }}>
+            <input style={{width: "200px"}}type="text" onChange={(e)=>this.handleChange(e)}></input>
+          </div>
+          <div style={{ padding:"15px", paddingTop:"0px", textAlign: "center" }}>
             <button onClick={(e)=>this.submitSaveLog(e)}>Save</button>
           </div>
         </div>

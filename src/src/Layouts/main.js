@@ -33,13 +33,13 @@ export default class Main extends React.Component {
       saveLogShowing: false,
       loadLogShowing: false,
       paused: false,
-      def: "",
       logClient: true,
       logServer: true,
-      autoScroll: true
+      autoScroll: true,
+      maxLogSize: 200,
+      fullView: true
     }
     this.state = this.defaultState
-    
   }
   async componentDidMount(){
     axios.get('/wsPort')
@@ -50,17 +50,17 @@ export default class Main extends React.Component {
         if(data.packets){
           let trimmedPackets = this.state.packets,
             trimmed = false
-          if (trimmedPackets.length+data.packets.length>200){
+          if (trimmedPackets.length+data.packets.length>this.state.maxLogSize){
             trimmed = true
-            trimmedPackets.splice(0, trimmedPackets.length+data.packets.length-200) // trim array if over max size of 200
+            trimmedPackets.splice(0, trimmedPackets.length+data.packets.length-this.state.maxLogSize) // trim array if over max size of 200
           }
-          this.setState(Object.assign(this.state, { packets: [...trimmedPackets, ...data.packets],  selectedIndex: trimmed?this.state.selectedIndex-1:this.state.selectedIndex}))
+          this.setState(Object.assign(this.state, { packets: [...trimmedPackets, ...data.packets],  selectedIndex: trimmed?this.state.selectedIndex-data.packets.length:this.state.selectedIndex}))
         } else if(data.syncState){
           this.setState(Object.assign(this.state, data.syncState))
         }
       })
     })
-    
+    window.$changeView(this.state.fullView?1281:281)//changing globals like an idiot
   }
   toggleDef(){
     if(!this.state.defShowing) this.setState({ defShowing: true });
@@ -70,16 +70,12 @@ export default class Main extends React.Component {
     if(!this.state.hexToolShowing)this.setState({ hexToolShowing: true });
     else this.setState({ hexToolShowing: false });
   }
-  selectIndex(i){
-    axios.post('getPacketData', {index: i})
+  selectIndex(i){ //get packet data and def
+    axios.post('/getPacketData', {index: i})
     .then((res)=>{
-      this.setState({selectedPacketCache: JSON.parse(res.data)})
-    })
-    axios.post('/getDef', {name: this.state.packets[i]})
-    .then((res)=>{
-      this.setState(Object.assign(this.state, {
-        selectedIndex: i,
-        def: res.data.def
+      this.setState(Object.assign( this.state, {
+        selectedPacketCache: JSON.parse(res.data),
+        selectedIndex: i
       }))
     })
   }
@@ -89,7 +85,7 @@ export default class Main extends React.Component {
       selectedPacketCache
     } = this.state
     if(selectedPacketCache){
-      if(filters.allowlist.indexOf(selectedPacketCache.string)>-1||filters.blocklist.indexOf(selectedPacketCache.string)>-1){
+      if(filters.allowlist.indexOf(selectedPacketCache.name)>-1||filters.blocklist.indexOf(selectedPacketCache.name)>-1){
         return true
       }
       return false
@@ -204,7 +200,13 @@ export default class Main extends React.Component {
   toggleAutoScroll = ()=>{
     this.setState({autoScroll: !this.state.autoScroll})
   }
-
+  changeMaxLogSize(e){
+    axios.post('/setMaxLogSize', {size: parseInt(e.target.value)})
+  }
+  toggleViewMode(e){
+    window.$changeView(!this.state.fullView?1281:281)//changing globals like an idiot
+    this.setState({fullView: !this.state.fullView})
+  }
 
   render() {
     const{
@@ -213,15 +215,16 @@ export default class Main extends React.Component {
       selectedIndex,
       savedFilters,
       savedLogs,
-      def,
       selectedPacketCache,
       logClient,
       logServer,
       autoScroll,
+      maxLogSize,
+      fullView
     } = this.state
     let defview, hextool, loadFilters, saveFilters, saveLog, loadLog
     if(this.state.defShowing)defview = <Definition
-      def={def}
+      def={selectedPacketCache.def?selectedPacketCache.def:""}
       toggleDef={()=>this.toggleDef()}
     />
     if(this.state.hexToolShowing)hextool = <HexTool
@@ -247,11 +250,52 @@ export default class Main extends React.Component {
       loadLog={(n)=>this.loadLog(n)}
       deleteFromSavedData={(name)=>this.deleteFromSavedData("savedLogs", name)}
     />
-
-    return(
-      <div className="main">
+    let windowView
+    if(fullView){
+      windowView = <div className="main">
+      <LogPane
+        autoScroll={autoScroll}
+        packets={packets}
+        selectIndex={(i)=>this.selectIndex(i)}
+        selectedIndex={selectedIndex}
+        logControlButton={(i)=>this.logControlButton(i)}
+        paused={this.state.paused}
+      />
+      <div className="centerpanel">
+        <DefView
+          data={selectedPacketCache}
+        />
+        <HexView
+          data={selectedPacketCache}
+          handleAddFilter={(list)=>this.handleAddFilter(list)}
+          filtered={this.checkFilter()}
+          toggleDef={()=>this.toggleDef()}
+          toggleHexTool={()=>this.toggleHexTool()}
+        />
+      </div>
+      <FilterPane
+        maxLogSize={maxLogSize}
+        changeMaxLogSize={(e)=>this.changeMaxLogSize(e)}
+        autoScroll={autoScroll}
+        toggleAutoScroll={this.toggleAutoScroll}
+        filters={filters}
+        changeFilters={(list, i)=>this.handleRemoveFilter(list, i)}
+        toggleLoadFilters={()=>this.toggleLoadFilters()}
+        toggleSaveFilters={()=>this.toggleSaveFilters()}
+        filterGroup={(group)=>this.filterGroup(group)}
+        logClient={logClient}
+        logServer={logServer}
+      />
+      {defview}
+      {hextool}
+      {loadFilters}
+      {saveFilters}
+      {saveLog}
+      {loadLog}
+    </div>
+    } else {
+      windowView = <div className="mainSm">
         <LogPane
-          toggleAutoScroll={this.toggleAutoScroll}
           autoScroll={autoScroll}
           packets={packets}
           selectIndex={(i)=>this.selectIndex(i)}
@@ -259,33 +303,15 @@ export default class Main extends React.Component {
           logControlButton={(i)=>this.logControlButton(i)}
           paused={this.state.paused}
         />
-        <div className="centerpanel">
-          <DefView
-            data={selectedPacketCache}
-            handleAddFilter={(list)=>this.handleAddFilter(list)}
-            filtered={this.checkFilter()}
-            toggleDef={()=>this.toggleDef()}
-          />
-          <HexView
-            data={selectedPacketCache}
-            toggleHexTool={()=>this.toggleHexTool()}
-          />
-        </div>
-        <FilterPane
-          filters={filters}
-          changeFilters={(list, i)=>this.handleRemoveFilter(list, i)}
-          toggleLoadFilters={()=>this.toggleLoadFilters()}
-          toggleSaveFilters={()=>this.toggleSaveFilters()}
-          filterGroup={(group)=>this.filterGroup(group)}
-          logClient={logClient}
-          logServer={logServer}
-        />
-        {defview}
-        {hextool}
-        {loadFilters}
-        {saveFilters}
         {saveLog}
         {loadLog}
+      </div>
+      
+    }
+    return(
+      <div>
+        {windowView}
+        <button className="collapseButton" onClick={(e)=>this.toggleViewMode(e)}>{this.state.fullView?"<<":">>"}</button>
       </div>
     )
   }

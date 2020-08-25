@@ -2,25 +2,14 @@ import React from 'react';
 import ReactJson from 'react-json-view';
 
 export default class DefView extends React.Component{
-  allowOnlyPacket(e){
-    e.preventDefault()
-    this.props.handleAddFilter("allowlist")
-  }
-  blockPacket(e){
-    e.preventDefault()
-    this.props.handleAddFilter("blocklist")
-  }
-  toggleDef(e){
-    e.preventDefault()
-    this.props.toggleDef()
-  }
   render(){
-    let packetName, packetData, packetVersion
+    let packetData, defTitle = ""
     if(this.props.data){ //TODO condition for empty object
-      packetName = this.props.data.string;
-      packetVersion = this.props.data.version;
+      let {name, version, timestamp, fake, badDef, data} = this.props.data
+      defTitle = `Defined View: [${new Date(timestamp*1000).toLocaleTimeString()}] ${name}${version&&version!==0?`.${version}`:""}${fake?"*":""} ${badDef?"(Bad Def)":""}`
+
       packetData = <ReactJson
-      src={this.props.data.data}
+      src={data}
       theme={{
         base00:"#1e1e1eff",
         base01:"#383830",
@@ -44,28 +33,10 @@ export default class DefView extends React.Component{
       displayDataTypes={false}
     />
     }
-    const buttons = <div>
-      <button
-        className="contentpanelbutton"
-        onClick={(e)=>this.allowOnlyPacket(e)}
-        disabled={this.props.filtered}
-      >Allow Only</button>
-      <button
-        className="contentpanelbutton"
-        onClick={(e)=>this.blockPacket(e)}
-        disabled={this.props.filtered}
-      >Block</button>
-      <button
-        className="contentpanelbutton"
-        onClick={(e)=>this.toggleDef(e)}
-        disabled={this.props.data?false:true}
-      >Definition</button>
-    </div>
     return(
       <div className="centerpanelsection">
         <div style={{backgroundColor: "#252526ff", height: "30px"}}>
-    <div style={{float: "left"}}>Defined View {this.props.data?`${packetName}.${packetVersion}`:""}</div>
-          <div style={{float: "right"}}>{buttons}</div>
+          <div style={{float: "left"}}>{defTitle}</div>
         </div>
         <div style={{overflow: "scroll", overflowX: "hidden", height: "330px", width: "720px"}}>
           {packetData}

@@ -26,6 +26,18 @@ export default class HexView extends React.Component {
     e.preventDefault()
     this.props.toggleHexTool()
   }
+  allowOnlyPacket(e){
+    e.preventDefault()
+    this.props.handleAddFilter("allowlist")
+  }
+  blockPacket(e){
+    e.preventDefault()
+    this.props.handleAddFilter("blocklist")
+  }
+  toggleDef(e){
+    e.preventDefault()
+    this.props.toggleDef()
+  }
   render() {
     let hexViewContent, button
     if (this.props.data) {
@@ -34,12 +46,33 @@ export default class HexView extends React.Component {
         <pre style={{ float: "right" }}>{this.hex2a(this.props.data.hex)}</pre>
       </div>
     }
+    const buttons = <div>
+      <button
+        className="contentpanelbutton"
+        onClick={(e)=>this.allowOnlyPacket(e)}
+        disabled={this.props.filtered}
+      >Allow Only</button>
+      <button
+        className="contentpanelbutton"
+        onClick={(e)=>this.blockPacket(e)}
+        disabled={this.props.filtered}
+      >Block</button>
+      <button
+        className="contentpanelbutton"
+        onClick={(e)=>this.toggleDef(e)}
+        disabled={this.props.data?false:true}
+      >Definition</button>
+      <button
+        className="contentpanelbutton" 
+        onClick={(e) => this.toggleHexTool(e)}
+      >HexTool</button>
+    </div>
     return (
       <div className="centerpanelsection">
         <div style={{backgroundColor: "#252526ff", height: "30px"}}>
           <div style={{ float: "left" }}>Hex View</div>
           <div style={{ float: "right" }}>
-            <button className="contentpanelbutton" onClick={(e) => this.toggleHexTool(e)}>HexTool</button>
+            {buttons}
           </div>
         </div>
         <div style={{overflow: "scroll", overflowX: "hidden", height: "330px", width: "720px"}}>

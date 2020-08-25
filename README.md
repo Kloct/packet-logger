@@ -42,3 +42,23 @@ Feel free to submit issues and PRs to improve the tool/fix bugs. The UI uses Rea
 You'll need to be sure it can connect to the api too. Either start tera-proxy and load the mod then use the server running there or reconfigure it to run standalone.
 
 To build the UI run `npm run build`
+
+---
+
+## Change Log
+
+```none
+8/24/20
+- Alphabetized filters
+- Configurable max log size
+- Log save format is much better (data is serialized)
+- Definition window now displays more data about the packet
+    ○ Timestamp
+    ○ Name
+    ○ Version
+    ○ Modified (noted with a `*`)
+    ○ Bad Def (if the def length doesn't match data recieved)
+- Lots of backend optimization
+- New collapsed view mode
+- Unmapped packet handler (unmapped packets are notes with `*` in the log)
+```

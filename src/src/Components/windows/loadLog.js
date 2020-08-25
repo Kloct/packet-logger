@@ -18,7 +18,7 @@ export default class loadLog extends React.Component {
     return (
       <Draggable
         handle=".popouttitle"
-        defaultPosition={{ x: 500, y: 300 }}
+        defaultPosition={{ x: 0, y: 500 }}
         position={null}
         scale={1}
         onStart={this.handleStart}

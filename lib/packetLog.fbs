@@ -1,0 +1,16 @@
+namespace Logger;
+
+table Packet {
+    code:ushort;
+    name:string;
+    version:ushort;
+    fake:bool;
+    data:[ubyte];
+    timestamp:ulong;
+}
+
+table PacketLog {
+    buffer:[Packet];
+}
+
+root_type PacketLog;

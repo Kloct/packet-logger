@@ -28,9 +28,13 @@
     <script src="coherent.js"></script>
     <script>
       window.onload = function(){
-        if(_tera_client_proxy_!==undefined){
-          _tera_client_proxy_.resize_to(1281, 721)
+        if(typeof _tera_client_proxy_!=='undefined'){
           _tera_client_proxy_.set_title('Packet Logger')
+        }
+      }
+      window.$changeView = function(width){
+        if(typeof _tera_client_proxy_!=='undefined'){
+          _tera_client_proxy_.resize_to(width, 721)
         }
       }
     </script>

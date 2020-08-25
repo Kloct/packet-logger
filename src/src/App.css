@@ -38,13 +38,19 @@ h1 {
   width: 1280px;
   height: 720px;
 }
+.mainSm {
+  background-color: var(--background);
+  width: 280px;
+  height: 720px;
+}
 button {
   background-color: var(--button);
   font-size: 12pt;
   color: var(--text);
   font-family: Consolas;
   border: none;
-  height: 30px
+  height: 30px;
+  border-radius: 2px;
 }
 button:hover {
   background-color: var(--buttonHover);
@@ -63,6 +69,19 @@ textarea, input {
   background-color: var(--background);
   border: none;
   color: var(--text);
+}
+.collapseButton {
+  color: white;
+  background-color: var(--background);
+  border-radius: 5px;
+  position: absolute;
+  top: 340px;
+  left: 240px;
+}
+.collapseButton:hover {
+  background-color: var(--tableHover);
+  border-color: white;
+  border-width: 1px;
 }
 
 /*log Pane*/
@@ -232,4 +251,35 @@ textarea, input {
   height: 80px;
   background-color: var(--background);
   margin-bottom: 15px;
+}
+
+/*select*/
+.selectItem {
+  position: absolute;
+  color: "white";
+  background-color: var(--background);
+  border: none;
+  bottom: 60px;
+  left: 1155px;
+  width: 70px;
+  border: 1px solid gray;
+  border-radius: 5px;
+  list-style: none;
+  padding: 5px;
+}
+.selectItem li:hover {
+  cursor: pointer;
+  background-color: var(--tableHover);
+}
+.selectMain {
+  margin-Left: 20px;
+  width: 80px;
+  height: 20px;
+  background-color: var(--background);
+  border: 1px solid gray;
+  border-radius: 5px;
+}
+
+.selectMain:hover {
+  background-color: var(--tableHover);
 }

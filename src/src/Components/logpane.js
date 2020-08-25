@@ -1,7 +1,5 @@
 import React from 'react';
 import '../App.css';
-import Checkbox from 'rc-checkbox'
-import 'rc-checkbox/assets/index.css';
 
 export default class LogPane extends React.Component {
   scrollToBottom(){
@@ -49,7 +47,6 @@ export default class LogPane extends React.Component {
           <div className="logpaneimgcontainer" onClick={(e)=>this.controlButton(e, 2)}><img src={process.env.PUBLIC_URL + "/clear.png"} alt="" /></div>
           <div className="logpaneimgcontainer" onClick={(e)=>this.controlButton(e, 3)}><img src={process.env.PUBLIC_URL + "/save.png"} alt="" /></div>
           <div className="logpaneimgcontainer" onClick={(e)=>this.controlButton(e, 4)}><img src={process.env.PUBLIC_URL + "/open.png"} alt="" /></div>
-          <div style={{color:"white", float:"right"}}>Autoscroll <Checkbox defaultChecked onChange={this.props.toggleAutoScroll}/></div>
         </div>
       </div>
     )
