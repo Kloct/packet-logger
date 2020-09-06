@@ -74,7 +74,9 @@ module.exports = function packetLogger(mod) {
     
     const batchPacketUpdates = setInterval(()=>{ //sending packets in batches as to not flood the UI's listener
         if(packetBatchCache.length>0){
-            if(packetCache.length+packetBatchCache.length>maxLogSize) packetCache.splice(0, packetCache.length+packetBatchCache.length-maxLogSize) // max size 200
+            if(maxLogSize){ //false if no limit
+                if(packetCache.length+packetBatchCache.length>maxLogSize) packetCache.splice(0, packetCache.length+packetBatchCache.length-maxLogSize) // max size 200
+            }
             wsServer.clients.forEach((client)=>{
                 client.send(JSON.stringify({packets: packetBatchCache.map((packet)=>packet.name)}))
             })
@@ -210,8 +212,8 @@ module.exports = function packetLogger(mod) {
         res.json({port: server.address().port})
     })
     ui.post('/setMaxLogSize', (req, res)=>{
-        maxLogSize = req.body.size
-        res.json({})
+        maxLogSize = req.body.size;
+        res.json({});
         syncState();
 
     })

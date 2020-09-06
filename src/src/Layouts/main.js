@@ -50,9 +50,11 @@ export default class Main extends React.Component {
         if(data.packets){
           let trimmedPackets = this.state.packets,
             trimmed = false
-          if (trimmedPackets.length+data.packets.length>this.state.maxLogSize){
-            trimmed = true
-            trimmedPackets.splice(0, trimmedPackets.length+data.packets.length-this.state.maxLogSize) // trim array if over max size of 200
+          if(this.state.maxLogSize){ //false is no log limit
+            if (trimmedPackets.length+data.packets.length>this.state.maxLogSize){
+              trimmed = true
+              trimmedPackets.splice(0, trimmedPackets.length+data.packets.length-this.state.maxLogSize) // trim array if over max size of 200
+            }
           }
           this.setState(Object.assign(this.state, { packets: [...trimmedPackets, ...data.packets],  selectedIndex: trimmed?this.state.selectedIndex-data.packets.length:this.state.selectedIndex}))
         } else if(data.syncState){
@@ -200,8 +202,8 @@ export default class Main extends React.Component {
   toggleAutoScroll = ()=>{
     this.setState({autoScroll: !this.state.autoScroll})
   }
-  changeMaxLogSize(e){
-    axios.post('/setMaxLogSize', {size: parseInt(e.target.value)})
+  changeMaxLogSize(opt){
+    axios.post('/setMaxLogSize', {size: opt})
   }
   toggleViewMode(e){
     window.$changeView(!this.state.fullView?1281:281)//changing globals like an idiot

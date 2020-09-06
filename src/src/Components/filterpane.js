@@ -35,16 +35,16 @@ export default class FilterPane extends React.Component {
   }
   handleSelectSize(e){
     this.setState({selectSizeOpen: false})
-    this.props.changeMaxLogSize(e)
+    this.props.changeMaxLogSize(e.target.value)
   }
   render() {
     let selectSize,
-      options=["200", "500", "1000", "Infinity"]
+      options=["200", "500", "1000", "None"]
     if(this.state.selectSizeOpen){
       selectSize = 
         <ul className="selectItem">
-          {options.map(opt=>
-            <li value={opt} key={opt} onClick={(e)=>this.handleSelectSize(e)}>{`${opt}`}</li>
+          {options.map((opt, i)=>
+            <li value={opt} key={i} onClick={(e)=>this.handleSelectSize(e)}>{opt}</li>
           )}
         </ul>
     }
@@ -78,7 +78,7 @@ export default class FilterPane extends React.Component {
               <div style={{float:"left"}}>Max Log Size</div>
               {selectSize}
               <button className="selectMain" onClick={(e)=>{this.handleSelectSizeOpen(e)}}>
-                <div style={{float: "left"}}>{this.props.maxLogSize}</div>
+                <div style={{float: "left"}}>{this.props.maxLogSize===0?"None":this.props.maxLogSize}</div>
                 <div style={{float: "right"}}>^</div>
               </button>
             </div>
