@@ -6,6 +6,7 @@ const ws = require('ws');
 const defParse = require('./lib/defParser')
 const http = require('http')
 const LogSave = require('./lib/logSave').LogSave;
+const protocolData = require('../../data/data.json')
 
 module.exports = function packetLogger(mod) {
     //For standalone env install express and replace these vars
@@ -176,6 +177,37 @@ module.exports = function packetLogger(mod) {
     })
     ui.post('/getPacketData', (req, res)=>{
         //parse def here
+        const { name, version, data} = packetCache[req.body.index]
+        //check if unmapped ("No definition for packet: ${name}")
+        //check if def exists or it correct for data
+        //check if def is correct for data
+        let parsed = null,
+            badDef = false,
+            packetData, def
+            try {
+                parsed = mod.dispatch.fromRaw(name, version, data)
+            } catch(e) { badDef = true }
+
+        //get def string
+        try {
+            def = Buffer.from(protocolData.protocol[`${name}.${version}.def`], 'base64').toString()
+        } catch(e){ def = `No defintion found for packet: ${name}` }
+
+        //build and send
+        packetData = {...packetCache[req.body.index], ...{
+            data: parsed?parsed:{Error:`Could not parse ${name}: No definition found.`},
+            hex: data.toString('hex'),
+            def,
+            badDef
+        }}
+        let packetDataString = JSON.stringify(packetData, (key, value) =>
+            typeof value === 'bigint' ? value.toString() + 'n' : value // serialize bigint as string
+        )
+        res.json(packetDataString)
+    })
+    //Old Proxy Version
+    /*ui.post('/getPacketData', (req, res)=>{
+        //parse def here
         const { name, code, version, data} = packetCache[req.body.index]
         let parsed = null,
             badDef = false,
@@ -203,7 +235,7 @@ module.exports = function packetLogger(mod) {
             typeof value === 'bigint' ? value.toString() + 'n' : value // serialize bigint as string
         )
         res.json(packetDataString)
-    })
+    })*/
     ui.get('/clearLog', (req, res)=>{
         packetCache = []
         syncState();
@@ -256,6 +288,36 @@ module.exports = function packetLogger(mod) {
     //apply filters write packet
     function writePacket(pkt, flags) {
         //get pkt name
+        //check if exists
+        let name, defVersion
+        try {
+        let packetInfo = mod.dispatch.resolve(pkt.code)
+            name = packetInfo.name
+            defVersion = packetInfo.version
+        } catch {
+            name = `*${flags.incoming?"SU":"CU"}_NEEDS_REMAP_${pkt.code.toString(16).toString().toUpperCase()}`
+            defVersion = 0
+        }
+        //apply filters
+        if(filters.allowlist.length>0&&!filters.allowlist.includes(name)) return;
+        if(filters.blocklist.includes(name)) return;
+        if(!logGroup.logServer&&flags.incoming) return;
+        if(!logGroup.logClient&&!flags.incoming) return;
+        let packet = {
+            code: pkt.code,
+            name: name,
+            version: defVersion,
+            fake: flags.fake,
+            data: pkt.data,
+            timestamp: Math.round(Date.now()/1000)
+        }
+        if (!paused){
+            packetBatchCache.push(packet)
+        }
+            
+    }
+    /*function writePacket(pkt, flags) {
+        //get pkt name
         const name = mod.dispatch.protocol.packetEnum.code.get(pkt.code),
             defs = name && mod.dispatch.protocol.constructor.defs.get(name),
             defVersion = defs && Math.max(...defs.keys())
@@ -276,7 +338,7 @@ module.exports = function packetLogger(mod) {
             packetBatchCache.push(packet)
         }
             
-    }
+    }*/
 
     function readHex(hexx) {
         let hex = hexx.length%2>0?"0"+hexx:hexx //byte pad
