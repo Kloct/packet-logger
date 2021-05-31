@@ -1,0 +1,10 @@
+{
+    "name": "packet-logger",
+    "author": "Kloct",
+    "description": "A GUI packet logger with proxy integration",
+    "servers": [ "https://https://raw.githubusercontent.com/kloct/packet-logger/master/"],
+    "options":{
+      "cliName": "packet-logger",
+      "guiName": "Packet Logger"
+    }
+  }
