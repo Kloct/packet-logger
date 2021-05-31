@@ -2,7 +2,7 @@
 
 >Dependencies: [tera-proxy](https://github.com/tera-proxy/tera-proxy) or [toolbox](https://github.com/tera-toolbox/tera-toolbox), [UI](https://github.com/tera-mods/ui)
 
-This is a gui packet logger for tera-proxy that allows you to see TERA's live network stream.
+This is a gui packet logger for tera-proxy/toolbox that allows you to see TERA's live network stream.
 
 The mod uses the tera-data def library and tera-data-parser to parse packets into a "human readable" format
 
