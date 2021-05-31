@@ -2,10 +2,11 @@
   "files": {
     "index.js": "eeee263eb5d3c83fd3346af76b8133e16f32ebb7622339dcda9b3231cc0bf900",
     "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
-    "module.json": "65d791689635d9937d1466195060f197bdf1a8e05cf9e1e937f5b390367900ed",
+    "module.json": "7573cbbf9c6884d45c7adfdc321b094daa73cae39fc22b2930ed9f19ee5ea336",
     "package-lock.json": "1a158589ba80b13706cc1cd4338524754a866df584fd23c2ba6ee5c5b52ecfcc",
     "package.json": "775f8ed82b90d185d32664823cc34c4ced29eadf7622c85e9e2460b1793189e5",
-    "README.md": "76d3f757f429c5fb0e9e9b2bf3f5f660d4d71574dc05f86b8414c5d37124530b",
+    "README.md": "c69a478665592a4ae40e979aeff20c65a0b267a81dce8c76b10b15bc8bc89517",
+    "savedData.json": "7d263f58ce7e247973f8ed7845872e92f9b3df40e1d76a31d4d33d4a1898cbb1",
     "build/asset-manifest.json": "61f2963657ca06f8901f48e531c804fc378b44cf7a93b289f4e349dc37d016bc",
     "build/clear.png": "10c8bc9421b5c8f528f5fadea324a857ce867817b40c0abed2bffa81462ce635",
     "build/coherent.js": "6e2706e40cc4c968e49e8fd7ee05ed08eb158fd585c9a3e9762d5f3736c300a8",
