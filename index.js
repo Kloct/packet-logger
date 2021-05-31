@@ -1,12 +1,12 @@
-const UI = require('../ui')
-const bodyParser = require('../ui/node_modules/body-parser');
-const fs = require('fs');
-const path = require('path');
-const ws = require('ws');
-const defParse = require('./lib/defParser')
-const http = require('http')
-const LogSave = require('./lib/logSave').LogSave;
-const protocolData = require('../../data/data.json')
+const UI = require('../ui'),
+    fs = require('fs'),
+    path = require('path'),
+    ws = require('ws'),
+    http = require('http'),
+    bodyParser = require('../ui/node_modules/body-parser'),
+    defParse = require('./lib/defParser'),
+    LogSave = require('./lib/logSave').LogSave
+    
 
 module.exports = function packetLogger(mod) {
     //For standalone env install express and replace these vars
@@ -15,8 +15,10 @@ module.exports = function packetLogger(mod) {
     //ui.listen(port, () => console.log(`Express listening on port ${port}`));
     const ui = new UI(mod),
         { command } = mod.require
-    let packetBatchCache = []
+    const tbox = typeof mod.compileProto === 'undefined';
+    let packetBatchCache = [], protocolData
 
+    if(tbox) protocolData = require('../../data/data.json')
 
     /*Setup WS and api server*/
     let savedData = require('./savedData.json'),
@@ -177,22 +179,33 @@ module.exports = function packetLogger(mod) {
     })
     ui.post('/getPacketData', (req, res)=>{
         //parse def here
-        const { name, version, data} = packetCache[req.body.index]
-        //check if unmapped ("No definition for packet: ${name}")
-        //check if def exists or it correct for data
-        //check if def is correct for data
+        const { name, code, version, data} = packetCache[req.body.index]
         let parsed = null,
             badDef = false,
             packetData, def
+        if (tbox){
             try {
                 parsed = mod.dispatch.fromRaw(name, version, data)
             } catch(e) { badDef = true }
 
-        //get def string
-        try {
-            def = Buffer.from(protocolData.protocol[`${name}.${version}.def`], 'base64').toString()
-        } catch(e){ def = `No defintion found for packet: ${name}` }
+            //get def string
+            try {
+                def = Buffer.from(protocolData.protocol[`${name}.${version}.def`], 'base64').toString()
+            } catch(e){ def = `No defintion found for packet: ${name}` }
+        } else {
+            try {
+                parsed = mod.parse(code, version, data)
+                badDef = mod.packetLength(code, version, parsed) !== data.length
+            } catch(e) { badDef = true }
 
+            //get def string
+            const protocolPath = path.join(__dirname, '..', '..', 'node_modules', 'tera-data', 'protocol'),
+                defPath = path.join(protocolPath, `${name}.${version}.def`)
+            try {
+                def = defParse(fs.readFileSync(defPath, 'utf-8'), protocolPath).join('\n')
+            } catch(e){ def = `No defintion found for packet: ${name}` }
+        }
+        
         //build and send
         packetData = {...packetCache[req.body.index], ...{
             data: parsed?parsed:{Error:`Could not parse ${name}: No definition found.`},
@@ -205,37 +218,6 @@ module.exports = function packetLogger(mod) {
         )
         res.json(packetDataString)
     })
-    //Old Proxy Version
-    /*ui.post('/getPacketData', (req, res)=>{
-        //parse def here
-        const { name, code, version, data} = packetCache[req.body.index]
-        let parsed = null,
-            badDef = false,
-            packetData, def
-            try {
-                parsed = mod.parse(code, version, data)
-                badDef = mod.packetLength(code, version, parsed) !== data.length
-            } catch(e) { badDef = true }
-
-        //get def string
-        const protocolPath = path.join(__dirname, '..', '..', 'node_modules', 'tera-data', 'protocol'),
-            defPath = path.join(protocolPath, `${name}.${version}.def`)
-        try {
-            def = defParse(fs.readFileSync(defPath, 'utf-8'), protocolPath).join('\n')
-        } catch(e){ def = `No defintion found for packet: ${name}` }
-
-        //build and send
-        packetData = {...packetCache[req.body.index], ...{
-            data: parsed?parsed:{Error:`Could not parse ${name}: No definition found.`},
-            hex: data.toString('hex'),
-            def,
-            badDef
-        }}
-        let packetDataString = JSON.stringify(packetData, (key, value) =>
-            typeof value === 'bigint' ? value.toString() + 'n' : value // serialize bigint as string
-        )
-        res.json(packetDataString)
-    })*/
     ui.get('/clearLog', (req, res)=>{
         packetCache = []
         syncState();
@@ -287,16 +269,21 @@ module.exports = function packetLogger(mod) {
     })
     //apply filters write packet
     function writePacket(pkt, flags) {
-        //get pkt name
-        //check if exists
         let name, defVersion
-        try {
-        let packetInfo = mod.dispatch.resolve(pkt.code)
-            name = packetInfo.name
-            defVersion = packetInfo.version
-        } catch {
-            name = `*${flags.incoming?"SU":"CU"}_NEEDS_REMAP_${pkt.code.toString(16).toString().toUpperCase()}`
-            defVersion = 0
+        if(tbox){
+            try {
+                let packetInfo = mod.dispatch.resolve(pkt.code)
+                name = packetInfo.name
+                defVersion = packetInfo.version
+            } catch {
+                name = `*${flags.incoming?"SU":"CU"}_NEEDS_REMAP_${pkt.code.toString(16).toString().toUpperCase()}`
+                defVersion = 0
+            }
+        } else {
+            name = mod.dispatch.protocol.packetEnum.code.get(pkt.code)
+            let defs = name && mod.dispatch.protocol.constructor.defs.get(name)
+            defVersion = defs && Math.max(...defs.keys())
+            name = name?name:`*${flags.incoming?"SU":"CU"}_NEEDS_REMAP_${pkt.code.toString(16).toString().toUpperCase()}`
         }
         //apply filters
         if(filters.allowlist.length>0&&!filters.allowlist.includes(name)) return;
@@ -316,29 +303,6 @@ module.exports = function packetLogger(mod) {
         }
             
     }
-    /*function writePacket(pkt, flags) {
-        //get pkt name
-        const name = mod.dispatch.protocol.packetEnum.code.get(pkt.code),
-            defs = name && mod.dispatch.protocol.constructor.defs.get(name),
-            defVersion = defs && Math.max(...defs.keys())
-        //apply filters
-        if(filters.allowlist.length>0&&!filters.allowlist.includes(name)) return;
-        if(filters.blocklist.includes(name)) return;
-        if(!logGroup.logServer&&flags.incoming) return;
-        if(!logGroup.logClient&&!flags.incoming) return;
-        let packet = {
-            code: pkt.code,
-            name: name?name:`*${flags.incoming?"SU":"CU"}_NEEDS_REMAP_${pkt.code.toString(16).toString().toUpperCase()}`,
-            version: defVersion?defVersion:0,
-            fake: flags.fake,
-            data: pkt.data,
-            timestamp: Math.round(Date.now()/1000)
-        }
-        if (!paused){
-            packetBatchCache.push(packet)
-        }
-            
-    }*/
 
     function readHex(hexx) {
         let hex = hexx.length%2>0?"0"+hexx:hexx //byte pad
