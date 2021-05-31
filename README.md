@@ -1,10 +1,10 @@
 # Packet Logger
 
->Dependencies: [tera-proxy](https://github.com/tera-proxy/tera-proxy), [UI](https://github.com/tera-mods/ui)
+>Dependencies: [tera-proxy](https://github.com/tera-proxy/tera-proxy) or [toolbox](https://github.com/tera-toolbox/tera-toolbox), [UI](https://github.com/tera-mods/ui)
 
 This is a gui packet logger for tera-proxy that allows you to see TERA's live network stream.
 
-The mod uses the proxy def library and api to parse packets into a "human readable" format
+The mod uses the tera-data def library and tera-data-parser to parse packets into a "human readable" format
 
 ## Usage
 
@@ -48,6 +48,8 @@ To build the UI run `npm run build`
 ## Change Log
 
 ```none
+5/31/20
+- Added support for toolbox
 8/24/20
 - Alphabetized filters
 - Configurable max log size
