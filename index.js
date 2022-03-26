@@ -21,6 +21,8 @@ module.exports = function packetLogger(mod) {
     if (tbox) protocolData = require('../../data/data.json')
 
     /*Setup WS and api server*/
+    if(!fs.existsSync(path.join(__dirname, "savedData.json")))
+        fs.writeFileSync(path.join(__dirname, "savedData.json"), JSON.stringify({savedFilters: {}}, null, 1))
     let savedData = require('./savedData.json'),
         packetCache = [],
         filters = {
