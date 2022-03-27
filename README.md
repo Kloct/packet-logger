@@ -50,6 +50,7 @@ To build the UI run `npm run build`
 ```none
 3/27/22
 - Fixed issue with the clear log button not working properly.
+- Fixed issue where saved filters are deleted when there's an update. (This may happen once more for this update)
 5/31/20
 - Added support for toolbox
 8/24/20
