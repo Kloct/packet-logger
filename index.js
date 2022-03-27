@@ -223,8 +223,10 @@ module.exports = function packetLogger(mod) {
         res.json(packetDataString)
     })
     ui.get('/clearLog', (req, res) => {
-        packetCache = []
+        packetCache = [];
+        packetBatchCache = [];
         syncState();
+        res.json({});
     })
     ui.get('/wsPort', (req, res) => {
         res.json({ port: server.address().port })

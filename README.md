@@ -48,6 +48,8 @@ To build the UI run `npm run build`
 ## Change Log
 
 ```none
+3/27/22
+- Fixed issue with the clear log button not working properly.
 5/31/20
 - Added support for toolbox
 8/24/20

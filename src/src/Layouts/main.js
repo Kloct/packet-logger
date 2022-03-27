@@ -166,8 +166,10 @@ export default class Main extends React.Component {
       }
       //Clear: set state of packets to []
       case 2: {
-        this.setState(Object.assign(this.state, {selectedIndex: -1, selectedPacketCache: undefined, def:""}))
         axios.get('/clearLog')
+        .then(()=>{
+          this.setState(Object.assign(this.state, {selectedIndex: -1, selectedPacketCache: undefined, def:""}))
+        })
         break;
       }
       //Save request save current log to file
